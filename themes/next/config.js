@@ -5,7 +5,7 @@ const CONFIG = {
 
   NEXT_NAV_TYPE: 'normal', // ['fixed','autoCollapse','normal'] 分别是固定屏幕顶部并始终显示、固定屏幕顶部且滚动时隐藏，不固定屏幕顶部
 
-  NEXT_POST_LIST_COVER: false, // 文章列表显示封面图
+  NEXT_POST_LIST_COVER: true, // 文章列表显示封面图
   NEXT_POST_LIST_PREVIEW: true, // 显示文章预览
   NEXT_POST_LIST_SUMMARY: false, // 显示用户自定义摘要，有预览时优先只展示预览
 
@@ -22,12 +22,12 @@ const CONFIG = {
   NEXT_MENU_HOME: true, // 显示首页
   NEXT_MENU_CATEGORY: true, // 显示分类
   NEXT_MENU_TAG: true, // 显示标签
-  NEXT_MENU_ARCHIVE: true, // 显示归档
+  NEXT_MENU_ARCHIVE: false, // 显示归档
   NEXT_MENU_SEARCH: true, // 显示搜索
 
   NEXT_WIDGET_TO_TOP: true, // 是否显示回顶
   NEXT_WIDGET_TO_BOTTOM: false, // 显示回底
-  NEXT_WIDGET_DARK_MODE: false, // 显示日间/夜间模式切换
+  NEXT_WIDGET_DARK_MODE: true, // 显示日间/夜间模式切换
   NEXT_WIDGET_TOC: true, // 移动端显示悬浮目录
 
   NEXT_ARTICLE_RELATE_POSTS: true, // 相关文章推荐
