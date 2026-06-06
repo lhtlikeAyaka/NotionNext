@@ -34,3 +34,26 @@ if (typeof window !== 'undefined') {
         injectAnalyticsBridge();
     }
 })();
+<script type="module">
+  // Import the functions you need from the SDKs you need
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/12.14.0/firebase-app.js";
+  import { getAnalytics } from "https://www.gstatic.com/firebasejs/12.14.0/firebase-analytics.js";
+  // TODO: Add SDKs for Firebase products that you want to use
+  // https://firebase.google.com/docs/web/setup#available-libraries
+
+  // Your web app's Firebase configuration
+  // For Firebase JS SDK v7.20.0 and later, measurementId is optional
+  const firebaseConfig = {
+    apiKey: "AIzaSyB2IRqmq0ZGu4xFIMK2ij6sOBnM8UjYFGo",
+    authDomain: "notionnext-fa36a.firebaseapp.com",
+    projectId: "notionnext-fa36a",
+    storageBucket: "notionnext-fa36a.firebasestorage.app",
+    messagingSenderId: "758537767817",
+    appId: "1:758537767817:web:d9a999ae2111db34c02f58",
+    measurementId: "G-5DJB70VWDJ"
+  };
+
+  // Initialize Firebase
+  const app = initializeApp(firebaseConfig);
+  const analytics = getAnalytics(app);
+</script>
