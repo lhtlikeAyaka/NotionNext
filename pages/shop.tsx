@@ -1,13 +1,13 @@
 import { useState } from 'react'
 import { useUser } from '@clerk/nextjs'
-import { DynamicLayout } from '@/themes/theme' // 使用你找到的正确组件
+import { DynamicLayout } from '@/themes/theme' // 这是你项目中唯一确认有效的路径
 
-export default function ScoreShopPage(props: any) {
+export default function ScoreShopPage() {
   const { isLoaded, isSignedIn, user } = useUser()
   const [loading, setLoading] = useState(false)
   const [redeemedCode, setRedeemedCode] = useState<string | null>(null)
 
-  // 1. 签到逻辑
+  // 签到逻辑
   const handleCheckIn = async () => {
     setLoading(true)
     const res = await fetch('/api/check-in', { method: 'POST' })
@@ -16,7 +16,7 @@ export default function ScoreShopPage(props: any) {
     setLoading(false)
   }
 
-  // 2. 兑换逻辑
+  // 兑换逻辑
   const handleRedeem = async (itemId: string, itemName: string) => {
     if (!confirm(`确定兑换【${itemName}】吗？`)) return
     setLoading(true)
@@ -31,11 +31,11 @@ export default function ScoreShopPage(props: any) {
   }
 
   return (
-    // 使用 DynamicLayout 包裹，你的导航栏、Logo、配色会自动加载进来
-    <DynamicLayout {...props}>
+    // 直接套用布局，不再传入 props，从而避免触发任何数据路径依赖
+    <DynamicLayout>
       <div className="max-w-md mx-auto p-4 min-h-[50vh]">
         {!isLoaded ? <p className="text-center">加载中...</p> : !isSignedIn ? (
-          <p className="text-center py-10">请先登录</p>
+          <p className="text-center py-10">请先登录以查看积分商店</p>
         ) : (
           <div className="space-y-6">
             <h1 className="text-2xl font-bold">积分商店</h1>
@@ -61,15 +61,4 @@ export default function ScoreShopPage(props: any) {
       </div>
     </DynamicLayout>
   )
-}
-
-// 使用 require 动态引入，彻底绕过路径检查，确保编译通过
-export async function getStaticProps() {
-  const { getGlobalData } = require('@/lib/notion/getNotionData')
-  const BLOG = require('@/blog.config')
-  const props = await getGlobalData({ from: 'shop-page' })
-  return { 
-    props, 
-    revalidate: parseInt(BLOG.default?.NEXT_REVALIDATE_SECOND || 60) 
-  }
 }
