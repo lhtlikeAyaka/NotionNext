@@ -1,11 +1,14 @@
 import { useState } from 'react'
 import { useUser } from '@clerk/nextjs'
+import { Layout } from '@/layouts/Layout' // 引入 NotionNext 核心主皮肤
+import BLOG from '@/blog.config'          // 引入博客全局配置
 
-export default function ScoreShopPage() {
+export default function ScoreShopPage(props: any) {
   const { isLoaded, isSignedIn, user } = useUser()
   const [loading, setLoading] = useState(false)
   const [redeemedCode, setRedeemedCode] = useState<string | null>(null)
 
+  // 提取元数据
   const userMetadata = user?.publicMetadata as { score?: number; lastCheckIn?: string } || {}
   const currentScore = userMetadata.score || 0
   const lastCheckIn = userMetadata.lastCheckIn || ''
@@ -13,6 +16,7 @@ export default function ScoreShopPage() {
   const todayStr = new Date().toISOString().split('T')[0]
   const isCheckedInToday = lastCheckIn === todayStr
 
+  // 商品列表配置
   const shopItems = [
     { id: 'item_01', name: '绝区零全功能工具箱', desc: '含全套透视自瞄打包Mod', cost: 30, icon: '📦' },
     { id: 'item_02', name: '鸣潮高帧率画质包', desc: '针对中低端手机极致优化', cost: 50, icon: '⚡' },
@@ -62,65 +66,110 @@ export default function ScoreShopPage() {
     }
   }
 
-  if (!isLoaded) return <div className="p-8 text-center text-gray-500">加载中...</div>
-  if (!isSignedIn) return <div className="p-8 text-center text-red-500">⚠️ 请先登录后再访问积分商店</div>
+  // 1. 如果 Clerk 还没加载完，先显示基础骨架
+  if (!isLoaded) {
+    return (
+      <Layout {...props}>
+        <div className="w-full text-center py-12 text-gray-500">加载商店数据中...</div>
+      </Layout>
+    )
+  }
 
+  // 2. 将内容塞进 Layout 中，这样就会自动同步全局背景色和左上角 Logo 图标
   return (
-    <div className="max-w-md mx-auto min-h-screen bg-gray-50 p-4 pb-12">
-      <div className="bg-gradient-to-r from-blue-600 to-indigo-600 rounded-2xl p-5 text-white shadow-lg mb-5">
-        <div className="flex justify-between items-center">
-          <div>
-            <p className="text-xs text-blue-100">当前拥有积分</p>
-            <h2 className="text-3xl font-black mt-1">{currentScore} <span className="text-sm font-normal">分</span></h2>
-            <p className="text-xs text-blue-200 mt-2">用户: {user.username || user.primaryEmailAddress?.emailAddress}</p>
+    <Layout {...props}>
+      <div className="max-w-md mx-auto p-4 pb-12 transition-colors duration-300">
+        
+        {/* 未登录拦截温馨提示 */}
+        {!isSignedIn ? (
+          <div className="text-center py-12 bg-white dark:bg-zinc-900 rounded-2xl border border-gray-100 dark:border-zinc-800 p-6 shadow-sm">
+            <p className="text-red-500 font-bold mb-2">⚠️ 您尚未登录账号</p>
+            <p className="text-sm text-gray-400">请先通过网站导航栏登录后，再来签到或兑换 Mod 资源。</p>
           </div>
-          <button
-            onClick={handleCheckIn}
-            disabled={loading || isCheckedInToday}
-            className={`px-4 py-2 rounded-xl text-sm font-bold shadow-md transition-all ${
-              isCheckedInToday ? 'bg-blue-400/40 text-blue-100 cursor-not-allowed' : 'bg-white text-blue-600 active:scale-95'
-            }`}
-          >
-            {isCheckedInToday ? '今日已签' : '📅 签到+10'}
-          </button>
-        </div>
-      </div>
-
-      {redeemedCode && (
-        <div className="bg-green-50 border-2 border-green-300 text-green-800 rounded-xl p-4 mb-5 text-sm font-mono break-all">
-          {redeemedCode}
-        </div>
-      )}
-
-      <div className="flex items-center justify-between mb-3 px-1">
-        <h3 className="font-extrabold text-gray-800 text-lg">✨ 积分兑换商店</h3>
-      </div>
-
-      <div className="grid grid-cols-1 gap-3">
-        {shopItems.map((item) => (
-          <div key={item.id} className="bg-white rounded-xl p-4 flex items-center justify-between border border-gray-100 shadow-sm">
-            <div className="flex items-center space-x-3">
-              <span className="text-3xl">{item.icon}</span>
-              <div>
-                <h4 className="font-bold text-gray-900 text-sm">{item.name}</h4>
-                <p className="text-xs text-gray-400 mt-0.5">{item.desc}</p>
-                <div className="inline-block bg-amber-50 text-amber-700 text-[10px] font-bold px-1.5 py-0.5 rounded mt-1">
-                  🪙 需要 {item.cost} 积分
+        ) : (
+          <>
+            {/* 顶部积分及签到卡片 */}
+            <div className="bg-gradient-to-r from-blue-600 to-indigo-600 rounded-2xl p-5 text-white shadow-lg mb-5">
+              <div className="flex justify-between items-center">
+                <div>
+                  <p className="text-xs text-blue-100">当前拥有积分</p>
+                  <h2 className="text-3xl font-black mt-1">{currentScore} <span className="text-sm font-normal">分</span></h2>
+                  <p className="text-xs text-blue-200 mt-2 truncate max-w-[180px]">
+                    用户: {user.username || user.primaryEmailAddress?.emailAddress}
+                  </p>
                 </div>
+                <button
+                  onClick={handleCheckIn}
+                  disabled={loading || isCheckedInToday}
+                  className={`px-4 py-2 rounded-xl text-sm font-bold shadow-md transition-all ${
+                    isCheckedInToday ? 'bg-blue-400/40 text-blue-100 cursor-not-allowed' : 'bg-white text-blue-600 active:scale-95'
+                  }`}
+                >
+                  {isCheckedInToday ? '今日已签' : '📅 签到+10'}
+                </button>
               </div>
             </div>
-            <button
-              onClick={() => handleRedeem(item.id, item.name)}
-              disabled={loading}
-              className={`ml-2 px-3 py-1.5 rounded-lg text-xs font-black transition-all ${
-                currentScore >= item.cost ? 'bg-amber-500 text-white active:scale-95' : 'bg-gray-100 text-gray-400 cursor-not-allowed'
-              }`}
-            >
-              {currentScore >= item.cost ? '兑换' : '积分不足'}
-            </button>
-          </div>
-        ))}
+
+            {/* 兑换成功的凭证展示 */}
+            {redeemedCode && (
+              <div className="bg-green-50 dark:bg-green-950/30 border-2 border-green-300 dark:border-green-800 text-green-800 dark:text-green-300 rounded-xl p-4 mb-5 text-sm font-mono break-all">
+                {redeemedCode}
+              </div>
+            )}
+
+            {/* 商店标题 */}
+            <div className="flex items-center justify-between mb-3 px-1">
+              <h3 className="font-extrabold text-gray-800 dark:text-gray-100 text-lg">✨ 积分兑换商店</h3>
+            </div>
+
+            {/* 商品列表网格（完美适配明暗自适应背景） */}
+            <div className="grid grid-cols-1 gap-3">
+              {shopItems.map((item) => (
+                <div key={item.id} className="bg-white dark:bg-zinc-900 rounded-xl p-4 flex items-center justify-between border border-gray-100 dark:border-zinc-800 shadow-sm transition-colors">
+                  <div className="flex items-center space-x-3">
+                    <span className="text-3xl">{item.icon}</span>
+                    <div>
+                      <h4 className="font-bold text-gray-900 dark:text-gray-100 text-sm">{item.name}</h4>
+                      <p className="text-xs text-gray-400 dark:text-gray-500 mt-0.5">{item.desc}</p>
+                      <div className="inline-block bg-amber-50 dark:bg-amber-950/30 text-amber-700 dark:text-amber-400 text-[10px] font-bold px-1.5 py-0.5 rounded mt-1">
+                        🪙 需要 {item.cost} 积分
+                      </div>
+                    </div>
+                  </div>
+                  <button
+                    onClick={() => handleRedeem(item.id, item.name)}
+                    disabled={loading}
+                    className={`ml-2 px-3 py-1.5 rounded-lg text-xs font-black transition-all shrink-0 ${
+                      currentScore >= item.cost 
+                        ? 'bg-amber-500 text-white active:scale-95' 
+                        : 'bg-gray-100 dark:bg-zinc-800 text-gray-400 dark:text-zinc-600 cursor-not-allowed'
+                    }`}
+                  >
+                    {currentScore >= item.cost ? '兑换' : '积分不足'}
+                  </button>
+                </div>
+              ))}
+            </div>
+          </>
+        )}
       </div>
-    </div>
+    </Layout>
   )
+}
+
+/**
+ * 核心关键：必须注入 NotionNext 的静态或服务器端数据获取函数
+ * 这样原厂的 Layout 组件才能拿到网站标题、图标（Logo）以及全局菜单设置
+ */
+export async function getStaticProps() {
+  const { getGlobalData } = require('@/lib/notion/getNotionData')
+  const from = 'shop-page'
+  const globalData = await getGlobalData({ from })
+  
+  return {
+    props: {
+      ...globalData
+    },
+    revalidate: parseInt(BLOG.NEXT_REVALIDATE_SECOND)
+  }
 }
