@@ -1,9 +1,7 @@
 import { useState } from 'react'
 import { useUser } from '@clerk/nextjs'
-import BLOG from '@/blog.config'
-import { Layout } from '@/themes/nav/components/Layout'
 
-export default function ScoreShopPage(props: any) {
+export default function ScoreShopPage() {
   const { isLoaded, isSignedIn, user } = useUser()
   const [loading, setLoading] = useState(false)
   const [redeemedCode, setRedeemedCode] = useState<string | null>(null)
