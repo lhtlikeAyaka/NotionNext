@@ -67,15 +67,10 @@ const noAuthMiddleware = async (req: NextRequest, ev: any) => {
  */
 const authMiddleware = process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY
   ? clerkMiddleware((auth, req) => {
-      const { userId } = auth()
       // 处理 /dashboard 路由以及 premium 核心资源的登录保护
+      // 放弃原厂硬编码本地跳转，改用 Clerk 官方自适应拦截器，登录后自动回跳
       if (isTenantRoute(req)) {
-        if (!userId) {
-          // 用户未登录，重定向到 /sign-in
-          const url = new URL('/sign-in', req.url)
-          url.searchParams.set('redirectTo', req.url) // 保存重定向目标，登录成功后自动跳回
-          return NextResponse.redirect(url)
-        }
+        auth().protect()
       }
 
       // 处理管理员相关权限保护
