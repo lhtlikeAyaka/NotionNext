@@ -1,7 +1,8 @@
 import { useState } from 'react'
 import { useUser } from '@clerk/nextjs'
+import { DynamicLayout } from '@/themes/theme' // 使用你找到的正确组件
 
-export default function ScoreShopPage() {
+export default function ScoreShopPage(props: any) {
   const { isLoaded, isSignedIn, user } = useUser()
   const [loading, setLoading] = useState(false)
   const [redeemedCode, setRedeemedCode] = useState<string | null>(null)
