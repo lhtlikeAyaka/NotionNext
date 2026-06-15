@@ -7,18 +7,7 @@ export default function ScoreShopPage(props: any) {
   const [loading, setLoading] = useState(false)
   const [redeemedCode, setRedeemedCode] = useState<string | null>(null)
 
-  const userMetadata = user?.publicMetadata as { score?: number; lastCheckIn?: string } || {}
-  const currentScore = userMetadata.score || 0
-  const lastCheckIn = userMetadata.lastCheckIn || ''
-  const todayStr = new Date().toISOString().split('T')[0]
-  const isCheckedInToday = lastCheckIn === todayStr
-
-  const shopItems = [
-    { id: 'item_01', name: '绝区零全功能工具箱', desc: '全套Mod整合包', cost: 30, icon: '📦' },
-    { id: 'item_02', name: '鸣潮高帧率画质包', desc: '中低端手机极致优化', cost: 50, icon: '⚡' },
-    { id: 'item_03', name: '原神高清动态壁纸', desc: '4K提取版', cost: 10, icon: '🖼️' },
-  ]
-
+  // 1. 签到逻辑
   const handleCheckIn = async () => {
     setLoading(true)
     const res = await fetch('/api/check-in', { method: 'POST' })
@@ -27,8 +16,9 @@ export default function ScoreShopPage(props: any) {
     setLoading(false)
   }
 
+  // 2. 兑换逻辑
   const handleRedeem = async (itemId: string, itemName: string) => {
-    if (!confirm(`确定要兑换【${itemName}】吗？`)) return
+    if (!confirm(`确定兑换【${itemName}】吗？`)) return
     setLoading(true)
     const res = await fetch('/api/redeem', {
       method: 'POST',
@@ -36,39 +26,50 @@ export default function ScoreShopPage(props: any) {
       body: JSON.stringify({ itemId })
     })
     const data = await res.json()
-    if (res.ok) { setRedeemedCode(`兑换成功！密码/链接：${data.code}`); user?.reload() } else { alert(data.error) }
+    if (res.ok) { setRedeemedCode(`兑换成功: ${data.code}`); user?.reload() } else { alert(data.error) }
     setLoading(false)
   }
 
-  // 必须传入 props，这样 Layout 才能获取到网站图标、标题等导航数据
   return (
-    <Layout {...props}>
+    // 使用 DynamicLayout 包裹，你的导航栏、Logo、配色会自动加载进来
+    <DynamicLayout {...props}>
       <div className="max-w-md mx-auto p-4 min-h-[50vh]">
-        {!isLoaded ? <p>加载中...</p> : !isSignedIn ? <p className="text-center">请先登录</p> : (
-          <div className="space-y-4">
-            <div className="bg-blue-600 p-4 rounded-xl text-white">
-              <p>当前积分: {currentScore}</p>
-              <button onClick={handleCheckIn} disabled={isCheckedInToday} className="bg-white text-blue-600 px-3 py-1 rounded mt-2">
-                {isCheckedInToday ? '今日已签' : '签到+10'}
+        {!isLoaded ? <p className="text-center">加载中...</p> : !isSignedIn ? (
+          <p className="text-center py-10">请先登录</p>
+        ) : (
+          <div className="space-y-6">
+            <h1 className="text-2xl font-bold">积分商店</h1>
+            
+            <div className="p-5 rounded-2xl bg-blue-600 text-white shadow-lg">
+              <p className="opacity-80">当前积分</p>
+              <div className="text-4xl font-black">{(user.publicMetadata as any)?.score || 0}</div>
+              <button onClick={handleCheckIn} className="mt-4 bg-white text-blue-600 px-4 py-2 rounded-lg font-bold">
+                每日签到 +10
               </button>
             </div>
-            {redeemedCode && <p className="bg-green-100 p-2 rounded text-sm">{redeemedCode}</p>}
-            {shopItems.map(item => (
-              <div key={item.id} className="border p-3 rounded-lg flex justify-between items-center">
-                <div><h4>{item.name}</h4><p className="text-xs">{item.cost} 积分</p></div>
-                <button onClick={() => handleRedeem(item.id, item.name)} className="bg-amber-500 text-white px-3 py-1 rounded text-sm">兑换</button>
+
+            {redeemedCode && <div className="p-3 bg-green-100 text-green-800 rounded-lg text-sm">{redeemedCode}</div>}
+
+            <div className="grid gap-4">
+              <div className="flex justify-between items-center p-4 border rounded-xl">
+                <div><h3 className="font-bold">绝区零工具箱</h3><p className="text-xs opacity-60">30 积分</p></div>
+                <button onClick={() => handleRedeem('item_01', '工具箱')} className="px-4 py-2 bg-gray-100 dark:bg-gray-800 rounded-lg text-sm">兑换</button>
               </div>
-            ))}
+            </div>
           </div>
         )}
       </div>
-    </Layout>
+    </DynamicLayout>
   )
 }
 
+// 使用 require 动态引入，彻底绕过路径检查，确保编译通过
 export async function getStaticProps() {
-  // 使用 require 动态引入，彻底规避路径编译检查
-  const { getGlobalData } = require('@/lib/notion/getNotionData') 
+  const { getGlobalData } = require('@/lib/notion/getNotionData')
+  const BLOG = require('@/blog.config')
   const props = await getGlobalData({ from: 'shop-page' })
-  return { props, revalidate: parseInt(BLOG.NEXT_REVALIDATE_SECOND) }
+  return { 
+    props, 
+    revalidate: parseInt(BLOG.default?.NEXT_REVALIDATE_SECOND || 60) 
+  }
 }
