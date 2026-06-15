@@ -12,12 +12,14 @@ export const config = {
   matcher: ['/((?!.*\\..*|_next|/sign-in|/auth).*)', '/', '/(api|trpc)(.*)']
 }
 
-// 限制登录访问的路由
+// 限制登录访问的路由（在此处精准追加高级资源拦截规则）
 const isTenantRoute = createRouteMatcher([
   '/user/organization-selector(.*)',
   '/user/orgid/(.*)',
   '/dashboard',
-  '/dashboard/(.*)'
+  '/dashboard/(.*)',
+  '/premium(.*)',           // 👈 规则1：拦截所有以 /premium 开头的路由
+  '/(.*)premium(.*)'        // 👈 规则2：拦截任意自定义链接 slug 中包含 premium 关键字的页面
 ])
 
 // 限制权限访问的路由
@@ -66,12 +68,12 @@ const noAuthMiddleware = async (req: NextRequest, ev: any) => {
 const authMiddleware = process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY
   ? clerkMiddleware((auth, req) => {
       const { userId } = auth()
-      // 处理 /dashboard 路由的登录保护
+      // 处理 /dashboard 路由以及 premium 核心资源的登录保护
       if (isTenantRoute(req)) {
         if (!userId) {
           // 用户未登录，重定向到 /sign-in
           const url = new URL('/sign-in', req.url)
-          url.searchParams.set('redirectTo', req.url) // 保存重定向目标
+          url.searchParams.set('redirectTo', req.url) // 保存重定向目标，登录成功后自动跳回
           return NextResponse.redirect(url)
         }
       }
