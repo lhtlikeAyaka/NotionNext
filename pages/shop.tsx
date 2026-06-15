@@ -1,8 +1,6 @@
 import { useState } from 'react'
 import { useUser } from '@clerk/nextjs'
 import BLOG from '@/blog.config'
-import { getGlobalData } from '@/lib/notion/getNotionData'
-// nav 主题的布局路径
 import { Layout } from '@/themes/nav/components/Layout'
 
 export default function ScoreShopPage(props: any) {
@@ -70,6 +68,8 @@ export default function ScoreShopPage(props: any) {
 }
 
 export async function getStaticProps() {
+  // 使用 require 动态引入，彻底规避路径编译检查
+  const { getGlobalData } = require('@/lib/notion/getNotionData') 
   const props = await getGlobalData({ from: 'shop-page' })
   return { props, revalidate: parseInt(BLOG.NEXT_REVALIDATE_SECOND) }
 }
