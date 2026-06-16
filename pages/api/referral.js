@@ -37,8 +37,8 @@ export default async function handler(req, res) {
     }
 
     // 🪙 奖励数额配置
-    const INVITER_BONUS = 20 
-    const INVITEE_BONUS = 10 
+    const INVITER_BONUS = 50 
+    const INVITEE_BONUS = 30 
 
     // 获取双方当前的积分和邀请数据
     const currentInviterScore = inviter.publicMetadata?.score || 0
