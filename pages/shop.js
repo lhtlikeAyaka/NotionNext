@@ -183,7 +183,8 @@ export default function ScoreShopPage(props) {
             {/* 🔗 邀请新用户裂变组件 */}
             <div className="rounded-2xl border bg-white p-5 shadow-sm dark:bg-zinc-800 dark:border-zinc-700">
               <h3 className="font-bold text-sm text-gray-800 dark:text-zinc-200">✨ 邀请新老友，双向送福利</h3>
-              <p className="mt-1 text-xs text-gray-500 dark:text-zinc-400">分享你的专属链接，新用户注册并激活后，**你得 20 积分，对方得 10 积分**！奖励无上限！</p>
+             <p className="mt-1 text-xs text-gray-500 dark:text-zinc-400">分享你的专属链接，新用户注册并激活后，**你得 50 积分，对方得 30 积分**！奖励无上限！</p>
+
               <button
                 onClick={handleCopyInviteLink}
                 className={`mt-4 w-full rounded-xl px-4 py-3 text-center text-sm font-bold transition-all border ${
