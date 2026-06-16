@@ -1,15 +1,18 @@
 import { useState, useEffect } from 'react'
 import { useUser } from '@clerk/nextjs'
+import { getAuth, clerkClient } from '@clerk/nextjs/server' // 💡 引入服务器端状态抓取工具
 import BLOG from '@/blog.config'
 import { siteConfig } from '@/lib/config'
 import { fetchGlobalAllData } from '@/lib/db/SiteDataApi'
 
 export default function ScoreShopPage(props) {
-  const { isLoaded, isSignedIn, user } = useUser()
+  // 💡 1. 优先读取来自服务器端硬核注入的登录状态，彻底降维打击前端不同步的 Bug
+  const { isServerSignedIn, serverUserMetadata, serverUserId } = props
+  
+  const { isLoaded: clientLoaded, isSignedIn: clientSignedIn, user: clientUser } = useUser()
   const [loading, setLoading] = useState(false)
   const [redeemedCode, setRedeemedCode] = useState(null)
   
-  // 状态锁与邀请相关状态
   const [mounted, setMounted] = useState(false)
   const [pendingInviteCode, setPendingInviteCode] = useState(null)
   const [copySuccess, setCopySuccess] = useState(false)
@@ -18,9 +21,8 @@ export default function ScoreShopPage(props) {
   const siteTitle = siteInfo?.title || '积分商店'
   const siteIcon = siteInfo?.icon
 
-  // 核心生命周期：挂载锁并解析 URL 邀请码
   useEffect(() => {
-    setMounted(true) // 确保组件已在客户端就绪，防止水合报错
+    setMounted(true)
     
     if (typeof window !== 'undefined') {
       const urlParams = new URLSearchParams(window.location.search)
@@ -35,7 +37,7 @@ export default function ScoreShopPage(props) {
     }
   }, [])
 
-  // 1. 激活邀请奖励
+  // 激活邀请奖励
   const handleActivateReferral = async () => {
     if (!pendingInviteCode || loading) return
     setLoading(true)
@@ -50,7 +52,7 @@ export default function ScoreShopPage(props) {
         alert(data.message)
         localStorage.removeItem('pending_invite_code')
         setPendingInviteCode(null)
-        if (user?.reload) await user.reload()
+        window.location.reload() // 强制刷新同步
       } else {
         alert(data.error || '激活失败')
       }
@@ -61,10 +63,11 @@ export default function ScoreShopPage(props) {
     }
   }
 
-  // 2. 复制专属邀请链接
+  // 复制专属邀请链接
   const handleCopyInviteLink = () => {
-    if (!user?.id) return
-    const inviteLink = `${window.location.origin}${window.location.pathname}?ref=${user.id}`
+    const userId = serverUserId || clientUser?.id
+    if (!userId) return
+    const inviteLink = `${window.location.origin}${window.location.pathname}?ref=${userId}`
     navigator.clipboard.writeText(inviteLink).then(() => {
       setCopySuccess(true)
       setTimeout(() => setCopySuccess(false), 2000)
@@ -73,7 +76,7 @@ export default function ScoreShopPage(props) {
     })
   }
 
-  // 3. 每日签到
+  // 每日签到
   const handleCheckIn = async () => {
     if (loading) return
     setLoading(true)
@@ -82,7 +85,7 @@ export default function ScoreShopPage(props) {
       const data = await res.json()
       if (res.ok) { 
         alert(data.message)
-        if (user?.reload) await user.reload()
+        window.location.reload()
       } else { 
         alert(data.error) 
       }
@@ -93,7 +96,7 @@ export default function ScoreShopPage(props) {
     }
   }
 
-  // 4. 积分兑换
+  // 积分兑换
   const handleRedeem = async (itemId, itemName) => {
     if (loading) return
     if (!confirm(`确定要消耗积分兑换【${itemName}】吗？`)) return
@@ -107,7 +110,7 @@ export default function ScoreShopPage(props) {
       const data = await res.json()
       if (res.ok) {
         setRedeemedCode(`🎉 兑换成功！卡密/链接为：${data.code}`)
-        if (user?.reload) await user.reload()
+        setTimeout(() => window.location.reload(), 3000)
       } else { 
         alert(data.error) 
       }
@@ -118,13 +121,14 @@ export default function ScoreShopPage(props) {
     }
   }
 
-  // 未挂载前返回静默容器，阻止 Next.js 服务端/客户端结构冲突导致的隐形
   if (!mounted) {
     return <div className="min-h-screen bg-gray-50 dark:bg-zinc-900" />
   }
 
-  const currentScore = user?.publicMetadata?.score || 0
-  const hasBeenReferred = user?.publicMetadata?.referredBy
+  // 💡 2. 混合判断登录态：只要服务器端认为你登录了，或者前端认为你登录了，一律视为已登录！
+  const isSignedIn = isServerSignedIn || clientSignedIn
+  const currentScore = serverUserMetadata?.score || clientUser?.publicMetadata?.score || 0
+  const hasBeenReferred = serverUserMetadata?.referredBy || clientUser?.publicMetadata?.referredBy
 
   return (
     <div className="min-h-screen bg-gray-50 text-gray-900 dark:bg-zinc-900 dark:text-zinc-100 font-sans transition-colors duration-200">
@@ -148,12 +152,7 @@ export default function ScoreShopPage(props) {
 
       {/* 主框架 */}
       <main className="mx-auto max-w-md px-4 py-8 space-y-6">
-        {!isLoaded ? (
-          <div className="flex flex-col items-center justify-center py-20 space-y-3">
-            <div className="h-8 w-8 animate-spin rounded-full border-4 border-blue-600 border-t-transparent"></div>
-            <p className="text-sm text-gray-500 dark:text-zinc-400">正在同步账号数据...</p>
-          </div>
-        ) : !isSignedIn ? (
+        {!isSignedIn ? (
           /* 未登录状态卡片 */
           <div className="rounded-2xl border bg-white p-8 text-center shadow-sm dark:bg-zinc-800 dark:border-zinc-700">
             <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-blue-50 text-blue-600 dark:bg-zinc-700 dark:text-blue-400">🔒</div>
@@ -259,14 +258,38 @@ export default function ScoreShopPage(props) {
   )
 }
 
-export async function getStaticProps(req) {
-  const { locale } = req
+// 💡 3. 将 getStaticProps 升级为绝对能够动态感知状态的 getServerSideProps 函数！
+export async function getServerSideProps(context) {
+  const { req, locale } = context
   const from = 'shop-page'
+  
+  // A. 获取网站基础 Notion 菜单数据
   const props = await fetchGlobalAllData({ from, locale })
   
-  // 🛡️ 核心修复：严禁在刷新时删除 allPages，确保全局布局和导航成功渲染
+  // B. 从请求的浏览器底层 Header 中抓取 Clerk 登录态（这是加锁文章能判断成功的核心逻辑）
+  const { userId } = getAuth(req)
+  
+  let isServerSignedIn = false
+  let serverUserMetadata = {}
+
+  if (userId) {
+    try {
+      // C. 如果抓到了用户 ID，直接从 Clerk 后端服务器把该用户的积分和邀请数据调出来
+      const user = await clerkClient.users.getUser(userId)
+      isServerSignedIn = true
+      serverUserMetadata = user.publicMetadata || {}
+    } catch (e) {
+      console.error('获取服务端 Clerk 状态失败:', e)
+    }
+  }
+
+  // D. 将这些硬核的身份数据强行注入 props 传给前台组件
   return {
-    props,
-    revalidate: process.env.EXPORT ? undefined : siteConfig('NEXT_REVALIDATE_SECOND', BLOG.NEXT_REVALIDATE_SECOND, props?.NOTION_CONFIG)
+    props: {
+      ...props,
+      isServerSignedIn,
+      serverUserMetadata,
+      serverUserId: userId || null
+    }
   }
 }
