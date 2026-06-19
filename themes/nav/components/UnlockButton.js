@@ -92,7 +92,7 @@ export default function UnlockButton({ post }) {
         disabled={loading}
         className="w-full max-w-xs mx-auto bg-blue-600 hover:bg-blue-700 text-white font-bold py-2.5 px-4 rounded-lg text-sm transition-all disabled:opacity-50"
       >
-        {loading ? '正在处理交易...' : `💎 消耗 ${cost} 积废解锁`}
+        {loading ? '正在处理交易...' : `💎 消耗 ${cost} 积分解锁`}
       </button>
       
       {isSignedIn && (
