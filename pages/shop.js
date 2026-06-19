@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useUser } from '@clerk/nextjs'
 import LayoutBase from '@/themes/nav' // 强制绑定激活的 NAV 主题结构
-import { getGlobalData } from '@/lib/notion/getNotionData'
+import { getGlobalData } from '@/lib/db/SiteDataApi' // 完美对齐新版 SiteDataApi 抽象层
 
 export default function Shop(props) {
   const { products } = props
@@ -132,7 +132,7 @@ export async function getStaticProps() {
   const globalData = await getGlobalData({ from: 'shop' })
   
   const databaseId = process.env.NOTION_SHOP_DB_ID
-  const token = process.env.NOTION_ACCESS_TOKEN 
+  const token = process.env.NOTION_SECRET // 统一对接标准的集成的密钥变量名
   
   let products = []
   
@@ -162,7 +162,6 @@ export async function getStaticProps() {
             name: props.Name?.title[0]?.plain_text || '未分配名称的资源',
             cost: props.Cost?.number || 0,
             cover: props.Cover?.files[0]?.file?.url || props.Cover?.files[0]?.external?.url || ''
-            // 此处坚决不能提取并下发 props.Link.url，切断前端漏洞路径
           }
         })
       }
