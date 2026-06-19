@@ -5,6 +5,7 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import LogoBar from './LogoBar'
 import { MenuBarMobile } from './MenuBarMobile'
 import SearchInput from './SearchInput'
+import { useUser } from '@clerk/nextjs'
 
 /**
  * 顶部导航栏 + 菜单
@@ -15,6 +16,9 @@ export default function TopNavBar(props) {
   const { className } = props
   const [isOpen, changeShow] = useState(false)
   const collapseRef = useRef(null)
+
+  // 引入 Clerk 的用户状态，用于读取积分
+  const { isSignedIn, user } = useUser()
 
   let windowTop = 0
 
@@ -71,6 +75,16 @@ export default function TopNavBar(props) {
             <div className='relative md:hidden top-0 right-0'>
               <SearchInput className='my-3 rounded-full' />
             </div>
+            
+            {/* 移动端积分显示 */}
+            {isSignedIn && (
+              <div className="flex items-center px-2 py-0.5 bg-gray-100 dark:bg-neutral-800 rounded-full border border-gray-200 dark:border-neutral-700">
+                <span className="text-xs font-bold text-amber-500">
+                  🪙 {user?.publicMetadata?.score || 0}
+                </span>
+              </div>
+            )}
+
             <DarkModeButton className='flex text-md items-center h-full' />
             <div
               onClick={toggleMenuOpen}
@@ -84,10 +98,20 @@ export default function TopNavBar(props) {
           </div>
 
           {/* 桌面端顶部菜单 */}
-          <div className='hidden md:flex'>
+          <div className='hidden md:flex items-center'>
             {/* {links && links?.map((link, index) => <MenuItemDrop key={index} link={link} />)} */}
             <SearchInput className='my-3 rounded-full' />
-            <DarkModeButton className='my-5 mr-6 text-sm flex items-center h-full pt-px' />
+            
+            {/* 桌面端积分显示 */}
+            {isSignedIn && (
+              <div className="flex items-center ml-4 px-3 py-1 bg-gray-100 dark:bg-neutral-800 rounded-full border border-gray-200 dark:border-neutral-700">
+                <span className="text-sm font-bold text-amber-500">
+                  🪙 {user?.publicMetadata?.score || 0}
+                </span>
+              </div>
+            )}
+
+            <DarkModeButton className='my-5 ml-4 mr-6 text-sm flex items-center h-full pt-px' />
           </div>
         </div>
       </div>
