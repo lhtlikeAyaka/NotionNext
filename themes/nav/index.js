@@ -29,7 +29,7 @@ import CategoryItem from './components/CategoryItem'
 import FloatButtonCatalog from './components/FloatButtonCatalog'
 import Footer from './components/Footer'
 import JumpToTopButton from './components/JumpToTopButton'
-import LogoBar from './components/LogoBar'
+import LogoBar = from './components/LogoBar'
 import { MenuItem } from './components/MenuItem'
 import PageNavDrawer from './components/PageNavDrawer'
 import TagItemMini from './components/TagItemMini'
@@ -85,6 +85,12 @@ const LayoutBase = props => {
           show: true
         }
       })
+  }
+
+  // 处理签到点击事件
+  const handleSignIn = () => {
+    // 这里后续可以对接你的签到 API，例如调用 /api/check-in
+    alert('每日签到功能对接中...')
   }
 
   return (
@@ -191,6 +197,15 @@ const LayoutBase = props => {
             <FloatButtonCatalog {...props} />
           </div>
         )}
+
+        {/* 全局顶层圆形悬浮签到按钮（适配手机端触控体感） */}
+        <button
+          onClick={handleSignIn}
+          className='fixed bottom-24 right-4 md:right-6 z-50 flex h-12 w-12 items-center justify-center rounded-full bg-blue-600 text-white shadow-xl transition-all hover:bg-blue-700 hover:scale-105 active:scale-95 dark:bg-blue-500 dark:hover:bg-blue-600'
+          title='每日签到'
+        >
+          <i className='fas fa-calendar-check text-lg'></i>
+        </button>
 
         {/* 移动端导航抽屉 */}
         <PageNavDrawer {...props} filteredNavPages={filteredNavPages} />
