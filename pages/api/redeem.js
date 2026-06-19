@@ -17,7 +17,7 @@ export default async function handler(req, res) {
   }
 
   const databaseId = process.env.NOTION_SHOP_DB_ID
-  const token = process.env.NOTION_ACCESS_TOKEN // 对应你项目已有的 Notion 密钥变量名
+  const token = process.env.NOTION_SECRET // 统一对接标准的集成的密钥变量名
 
   try {
     // 2. 仅在后端请求 Notion 获取该特定商品的密文属性
