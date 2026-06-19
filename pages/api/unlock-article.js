@@ -11,7 +11,7 @@ export default async function handler(req, res) {
     const { postId, cost, encryptedLink, action } = req.body
     if (!postId || !encryptedLink) return res.status(400).json({ error: '资源状态异常' })
 
-    // 核心解密函数
+    // AES-256-CBC 解密核心算法
     const decryptLink = (encryptedText) => {
       try {
         const SECRET = process.env.RESOURCE_SECRET || 'lhttools_default_secret_2026_!!!'
@@ -32,13 +32,13 @@ export default async function handler(req, res) {
     const unlockedArticles = user.publicMetadata?.unlockedArticles || []
     const alreadyOwned = unlockedArticles.includes(postId)
 
-    // 仅解密不扣费（用户刷新页面时）
+    // 仅解密不扣费（用户刷新页面时校验）
     if (action === 'decrypt_only') {
       if (alreadyOwned) return res.status(200).json({ realLink: decryptLink(encryptedLink) })
       return res.status(403).json({ error: '无权查看此加密资源' })
     }
 
-    // 主动购买扣费
+    // 主动购买扣费逻辑
     if (alreadyOwned) {
       return res.status(200).json({ message: '您已解锁过', realLink: decryptLink(encryptedLink) })
     }
@@ -47,7 +47,7 @@ export default async function handler(req, res) {
       return res.status(403).json({ error: '积分不足，请先获取积分' })
     }
 
-    // 扣费并写入权限
+    // 扣除积分并追加已解锁数组
     await clerkClient.users.updateUserMetadata(userId, {
       publicMetadata: {
         score: currentScore - cost,
