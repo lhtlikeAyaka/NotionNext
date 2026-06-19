@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useUser } from '@clerk/nextjs'
 import LayoutBase from '@/themes/nav' // 强制绑定激活的 NAV 主题结构
-import { getGlobalData } from '@/lib/notion/getNotionData'
+import { getGlobalData } from '@/lib/notion/getPostBlocks'
 
 export default function Shop(props) {
   const { products } = props
