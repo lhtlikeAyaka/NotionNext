@@ -21,6 +21,7 @@ import { useRouter } from 'next/router'
 import { createContext, useContext, useEffect, useState } from 'react'
 import Announcement from './components/Announcement'
 import { ArticleLock } from './components/ArticleLock'
+import UnlockButton from './components/UnlockButton'
 import BlogArchiveItem from './components/BlogArchiveItem'
 import BlogPostCard from './components/BlogPostCard'
 import BlogPostListAll from './components/BlogPostListAll'
@@ -237,7 +238,7 @@ const LayoutPostList = props => {
       <div className='w-full max-w-7xl mx-auto justify-center mt-8'>
         <div
           id='posts-wrapper'
-          class='card-list grid gap-4 sm:grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5'>
+          className='card-list grid gap-4 sm:grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5'>
           {posts?.map(post => (
             <BlogPostCard key={post.id} post={post} className='card' />
           ))}
@@ -295,6 +296,9 @@ const LayoutSlug = props => {
               <div id='article-wrapper'>
                 <NotionPage post={post} />
               </div>
+
+              {/* 资源解锁与下载按钮 */}
+              <UnlockButton post={post} />
 
               {/* 分享 */}
               {/* <ShareBar post={post} /> */}
