@@ -1,20 +1,23 @@
 import { useState, useEffect } from 'react'
 import { useUser } from '@clerk/nextjs'
-import { LayoutBase } from '@/themes/nav' // 保持具名导入，对齐你的 nav 主题组件
+import { LayoutBase } from '@/themes/nav'
 import BLOG from '@/blog.config'
 import { siteConfig } from '@/lib/config'
-import { fetchGlobalAllData } from '@/lib/db/SiteDataApi' // ⚡ 彻底对齐首页，导入正确的数据方法
+import { fetchGlobalAllData } from '@/lib/db/SiteDataApi'
 
 export default function Shop(props) {
-  const { products } = props
+  const { products = [] } = props
   const { isSignedIn, user } = useUser()
   const [userPoints, setUserPoints] = useState(0)
   const [loadingId, setLoadingId] = useState(null)
 
-  // 挂载时无缝同步 Clerk 云端用户独立积分
+  // ⚡ 核心修复：兼容 score 和 points 字段，防止页面刷新黑屏/白屏
   useEffect(() => {
-    if (isSignedIn && user) {
-      setUserPoints(parseInt(user.publicMetadata?.points || '0', 10))
+    if (isSignedIn && user && user.publicMetadata) {
+      const metadata = user.publicMetadata
+      // 智能优先读取 score，否则读取 points
+      const currentPoints = metadata.score !== undefined ? metadata.score : (metadata.points !== undefined ? metadata.points : 0)
+      setUserPoints(parseInt(currentPoints.toString() || '0', 10))
     }
   }, [isSignedIn, user])
 
@@ -24,12 +27,10 @@ export default function Shop(props) {
       return
     }
     if (userPoints < product.cost) {
-      alert(`积分不足！兑换此资源需要 ${product.cost} 积分，你当前只有 ${userPoints} 积分。`)
+      alert(`积分不足！当前只有 ${userPoints} 积分。`)
       return
     }
-    if (!confirm(`确定要消耗 ${product.cost} 积分兑换【${product.name}】吗？`)) {
-      return
-    }
+    if (!confirm(`确定要消耗 ${product.cost} 积分兑换【${product.name}】吗？`)) return
 
     setLoadingId(product.id)
     try {
@@ -42,13 +43,13 @@ export default function Shop(props) {
       
       if (res.ok) {
         setUserPoints(data.newPoints)
-        alert(`🎉 兑换成功！积分已成功扣除。\n点击[确定]前往资源下载页面。`)
+        alert('🎉 兑换成功！')
         window.open(data.link, '_blank')
       } else {
-        alert(data.error || '兑换响应异常')
+        alert(data.error || '兑换失败')
       }
     } catch (err) {
-      alert('前端请求通信中断，请检查手机网络')
+      alert('网络异常，请重试')
     } finally {
       setLoadingId(null)
     }
@@ -57,73 +58,38 @@ export default function Shop(props) {
   return (
     <LayoutBase {...props}>
       <div className="w-full max-w-6xl mx-auto px-2 py-4">
-        {/* 顶部个人资产及看板公告区 */}
-        <div className="bg-white dark:bg-neutral-800 rounded-2xl p-5 shadow-sm mb-6 flex flex-col sm:flex-row justify-between items-center gap-4 border border-gray-100 dark:border-neutral-700">
-          <div className="text-center sm:text-left">
-            <h1 className="text-xl font-bold text-gray-800 dark:text-gray-100 flex items-center justify-center sm:justify-start gap-2">
-              <i className="fas fa-store text-blue-500"></i> 积分资源福利商店
-            </h1>
-            <p className="text-xs text-gray-400 mt-1">使用每日签到积累的积分，免费兑换独家整合包及高级调试工具</p>
+        {/* 资产展示区 */}
+        <div className="bg-white dark:bg-neutral-800 rounded-2xl p-5 shadow-sm mb-6 flex justify-between items-center border border-gray-100 dark:border-neutral-700">
+          <div>
+            <h1 className="text-xl font-bold">积分福利商店</h1>
+            <p className="text-xs text-gray-400">使用您的积分兑换资源</p>
           </div>
-          <div className="bg-blue-50 dark:bg-blue-950/40 px-5 py-2.5 rounded-xl border border-blue-100 dark:border-blue-900/50 text-center sm:text-right min-w-[140px]">
-            <span className="text-xs text-blue-600 dark:text-blue-400 block font-semibold mb-0.5">我的可用资产</span>
-            <span className="text-2xl font-black text-blue-600 dark:text-blue-400">
-              {isSignedIn ? userPoints : '---'} <span className="text-xs font-normal">分</span>
-            </span>
+          <div className="bg-blue-50 dark:bg-blue-950/40 px-5 py-2.5 rounded-xl text-right">
+            <span className="text-xs text-blue-600 block">我的可用资产</span>
+            <span className="text-2xl font-black text-blue-600">{isSignedIn ? userPoints : '0'} <span className="text-xs">分</span></span>
           </div>
         </div>
 
-        {/* 手机端深度优化的自适应商品网格 */}
+        {/* 商品展示区 */}
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-          {products?.map(product => (
-            <div key={product.id} className="bg-white dark:bg-neutral-800 rounded-2xl border border-gray-100 dark:border-neutral-700 overflow-hidden shadow-sm hover:shadow-md transition-all flex flex-col">
-              {/* 图片比例16:10，防止移动端高度崩塌 */}
-              <div className="relative aspect-[16/10] bg-gray-50 dark:bg-neutral-900 w-full overflow-hidden">
-                {product.cover ? (
-                  <img src={product.cover} alt={product.name} className="w-full h-full object-cover" loading="lazy" />
-                ) : (
-                  <div className="w-full h-full flex items-center justify-center text-gray-300 dark:text-neutral-700">
-                    <i className="fas fa-cubes text-3xl"></i>
-                  </div>
-                )}
-                {/* 悬浮积分角标 */}
-                <div className="absolute top-2 right-2 bg-black/60 backdrop-blur-md px-2.5 py-1 rounded-lg text-xs font-bold text-yellow-400 flex items-center gap-1">
-                  <i className="fas fa-database text-[10px]"></i> {product.cost} 积分
-                </div>
+          {products.map(product => (
+            <div key={product.id} className="bg-white dark:bg-neutral-800 rounded-2xl border p-4 shadow-sm flex flex-col gap-3">
+              <div className="aspect-[16/10] bg-gray-100 dark:bg-neutral-900 rounded-lg overflow-hidden">
+                {product.cover && <img src={product.cover} className="w-full h-full object-cover" />}
               </div>
-              
-              {/* 卡片详情及底栏交互 */}
-              <div className="p-4 flex flex-col flex-grow justify-between gap-4">
-                <h3 className="font-bold text-sm text-gray-800 dark:text-gray-200 line-clamp-2 min-h-[40px] leading-snug">
-                  {product.name}
-                </h3>
-                
-                <button
-                  onClick={() => handleRedeem(product)}
-                  disabled={loadingId === product.id}
-                  className={`w-full py-2.5 rounded-xl text-xs font-bold transition-all text-white flex items-center justify-center gap-1.5 ${
-                    loadingId === product.id
-                      ? 'bg-gray-400 cursor-not-allowed'
-                      : 'bg-blue-600 hover:bg-blue-700 active:scale-95 shadow-sm shadow-blue-500/10'
-                  }`}
-                >
-                  {loadingId === product.id ? (
-                    <><i className="fas fa-spinner animate-spin"></i> 安全验签中...</>
-                  ) : (
-                    <><i className="fas fa-shopping-cart"></i> 消耗积分兑换</>
-                  )}
-                </button>
-              </div>
+              <h3 className="font-bold text-sm line-clamp-2 h-10">{product.name}</h3>
+              <button 
+                onClick={() => handleRedeem(product)}
+                className="w-full py-2 bg-blue-600 text-white rounded-lg text-xs font-bold hover:bg-blue-700 transition-all"
+              >
+                {loadingId === product.id ? '处理中...' : `${product.cost} 积分兑换`}
+              </button>
             </div>
           ))}
         </div>
-
-        {/* 缺省兜底状态 */}
-        {products?.length === 0 && (
-          <div className="text-center py-20 text-gray-400 text-sm bg-white dark:bg-neutral-800 rounded-2xl border border-gray-100 dark:border-neutral-700">
-            <i className="fas fa-box-open text-4xl mb-3 block text-gray-300 dark:text-neutral-600"></i>
-            货架上空空如也，掌柜正在极速上新中...
-          </div>
+        
+        {products.length === 0 && (
+          <div className="text-center py-20 text-gray-400">货架暂无资源...</div>
         )}
       </div>
     </LayoutBase>
@@ -132,55 +98,36 @@ export default function Shop(props) {
 
 export async function getStaticProps(ctx) {
   const { locale } = ctx
-  const from = 'shop'
-  // ⚡ 彻底对齐首页，传入规范的对象参数获取全局菜单与配置
-  const globalData = await fetchGlobalAllData({ from, locale })
-  
-  const databaseId = process.env.NOTION_SHOP_DB_ID
-  const token = process.env.NOTION_SECRET 
+  const globalData = await fetchGlobalAllData({ from: 'shop', locale })
   
   let products = []
+  const databaseId = process.env.NOTION_SHOP_DB_ID
+  const token = process.env.NOTION_SECRET 
   
   if (databaseId && token) {
     try {
       const response = await fetch(`https://api.notion.com/v1/databases/${databaseId}/query`, {
         method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Notion-Version': '2022-06-28',
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-          filter: {
-            property: 'Status',
-            select: { equals: '已上架' }
-          }
-        })
+        headers: { 'Authorization': `Bearer ${token}`, 'Notion-Version': '2022-06-28', 'Content-Type': 'application/json' }
       })
-      
       if (response.ok) {
         const data = await response.json()
         products = data.results.map(row => {
-          const props = row.properties
-          return {
-            id: row.id,
-            name: props.Name?.title[0]?.plain_text || '未分配名称的资源',
-            cost: props.Cost?.number || 0,
-            cover: props.Cover?.files[0]?.file?.url || props.Cover?.files[0]?.external?.url || ''
+          const p = row.properties
+          return { 
+            id: row.id, 
+            name: p.Name?.title[0]?.plain_text || p.名称?.title[0]?.plain_text || '未命名',
+            cost: p.Cost?.number || p.积分?.number || 0,
+            cover: p.Cover?.files[0]?.file?.url || p.图片?.files[0]?.file?.url || '',
+            status: p.Status?.select?.name || p.状态?.select?.name || '已上架'
           }
-        })
+        }).filter(p => p.status === '已上架')
       }
-    } catch (error) {
-      console.error('Notion ISR Fetching Failed:', error)
-    }
+    } catch (e) { console.error(e) }
   }
 
   return {
-    props: {
-      products,
-      ...globalData
-    },
-    // ⚡ 缓存刷新时间同样对齐首页的配置文件逻辑
-    revalidate: siteConfig('NEXT_REVALIDATE_SECOND', BLOG.NEXT_REVALIDATE_SECOND, globalData?.NOTION_CONFIG) || 15
+    props: { products, ...globalData },
+    revalidate: 60
   }
 }
