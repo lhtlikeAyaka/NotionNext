@@ -19,6 +19,7 @@ import dynamic from 'next/dynamic'
 import SmartLink from '@/components/SmartLink'
 import { useRouter } from 'next/router'
 import { createContext, useContext, useEffect, useState } from 'react'
+import { useUser } from '@clerk/nextjs' // 引入 Clerk 前端用户状态钩子
 import Announcement from './components/Announcement'
 import { ArticleLock } from './components/ArticleLock'
 import UnlockButton from './components/UnlockButton'
@@ -29,7 +30,7 @@ import CategoryItem from './components/CategoryItem'
 import FloatButtonCatalog from './components/FloatButtonCatalog'
 import Footer from './components/Footer'
 import JumpToTopButton from './components/JumpToTopButton'
-import LogoBar from './components/LogoBar'
+import LogoBar = './components/LogoBar'
 import { MenuItem } from './components/MenuItem'
 import PageNavDrawer from './components/PageNavDrawer'
 import TagItemMini from './components/TagItemMini'
@@ -67,9 +68,29 @@ const LayoutBase = props => {
 
   const showTocButton = post?.toc?.length > 1
 
+  // Clerk 用户登录状态与元数据读取
+  const { isSignedIn, user } = useUser()
+  const [points, setPoints] = useState(0)
+  const [hasSignedIn, setHasSignedIn] = useState(false)
+
+  // 监听登录状态，实时同步 Clerk 个人云端数据库内的积分与签到指标
   useEffect(() => {
     setFilteredNavPages(allNavPages)
-  }, [post])
+    
+    if (isSignedIn && user) {
+      // 从 Clerk 的 publicMetadata 独立空间抓取数据
+      const currentPoints = parseInt(user.publicMetadata?.points || '0', 10)
+      setPoints(currentPoints)
+      
+      const lastDate = user.publicMetadata?.lastSignInDate
+      const today = new Date().toISOString().split('T')[0]
+      setHasSignedIn(lastDate === today)
+    } else {
+      // 退出登录或未登录状态重置本地状态
+      setPoints(0)
+      setHasSignedIn(false)
+    }
+  }, [post, allNavPages, isSignedIn, user])
 
   let links = customMenu
 
@@ -87,10 +108,32 @@ const LayoutBase = props => {
       })
   }
 
-  // 处理签到点击事件
-  const handleSignIn = () => {
-    // 这里后续可以对接你的签到 API，例如调用 /api/check-in
-    alert('每日签到功能对接中...')
+  // 对接 Clerk 账户的小型动态后端签到处理逻辑
+  const handleSignIn = async () => {
+    if (!isSignedIn) {
+      alert('请先登录账号后再进行签到！')
+      return
+    }
+
+    try {
+      // 请求后端的真实 Clerk 隔离环境进行安全加分
+      const res = await fetch('/api/check-in', { method: 'POST' })
+      const data = await res.json()
+      
+      if (res.ok) {
+        setPoints(data.points)
+        setHasSignedIn(true)
+        alert(`🎉 签到成功！\n获得奖励：+10 积分\n当前独立账户总积分：${data.points} 分`)
+      } else {
+        alert(data.error || '签到失败，请稍后再试')
+        if (data.points !== undefined) {
+          setPoints(data.points)
+        }
+      }
+    } catch (error) {
+      console.error('Clerk Sign-in Error:', error)
+      alert('网络通信异常，请检查网络后重试')
+    }
   }
 
   return (
@@ -198,13 +241,19 @@ const LayoutBase = props => {
           </div>
         )}
 
-        {/* 全局顶层圆形悬浮签到按钮（适配手机端触控体感） */}
+        {/* 全局专属：由 Clerk 独立账号数据库驱动的签到悬浮组件 */}
         <button
           onClick={handleSignIn}
-          className='fixed bottom-24 right-4 md:right-6 z-50 flex h-12 w-12 items-center justify-center rounded-full bg-blue-600 text-white shadow-xl transition-all hover:bg-blue-700 hover:scale-105 active:scale-95 dark:bg-blue-500 dark:hover:bg-blue-600'
-          title='每日签到'
+          className={`fixed bottom-24 right-4 md:right-6 z-50 flex h-12 w-12 items-center justify-center rounded-full shadow-xl transition-all hover:scale-105 active:scale-95 text-white ${
+            !isSignedIn
+              ? 'bg-gray-400 hover:bg-gray-500'
+              : hasSignedIn 
+                ? 'bg-emerald-500 hover:bg-emerald-600 dark:bg-emerald-600' 
+                : 'bg-blue-600 hover:bg-blue-700 dark:bg-blue-500'
+          }`}
+          title={!isSignedIn ? '请登录账户' : hasSignedIn ? `今日已签到 (当前:${points}分)` : '每日签到 (+10积分)'}
         >
-          <i className='fas fa-calendar-check text-lg'></i>
+          <i className={`fas ${hasSignedIn ? 'fa-check-circle' : 'fa-calendar-check'} text-lg`}></i>
         </button>
 
         {/* 移动端导航抽屉 */}
