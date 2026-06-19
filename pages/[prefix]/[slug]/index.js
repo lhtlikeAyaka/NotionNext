@@ -50,6 +50,37 @@ export async function getStaticProps({ params: { prefix, slug }, locale }) {
     locale,
   })
 
+  // === 👇 核心积分资源服务端加密拦截逻辑 👇 ===
+  try {
+    if (props?.post) {
+      const targetPost = props.post
+      const rawDownloadLink = targetPost.properties?.DownloadLink || targetPost.downloadLink
+      const cost = targetPost.properties?.Cost || targetPost.cost
+
+      // 只有同时满足有下载链接，且扣除积分大于0时，才进行服务端降维销毁
+      if (rawDownloadLink && cost > 0) {
+        const crypto = require('crypto')
+        const SECRET = process.env.RESOURCE_SECRET || 'lhttools_default_secret_2026_!!!'
+        const iv = crypto.randomBytes(16)
+        const cipher = crypto.createCipheriv('aes-256-cbc', Buffer.from(SECRET.padEnd(32, '0').slice(0, 32)), iv)
+        
+        let encrypted = cipher.update(rawDownloadLink, 'utf8', 'hex')
+        encrypted += cipher.final('hex')
+        
+        // 挂载加密密文与成本数字
+        targetPost.encryptedLink = iv.toString('hex') + ':' + encrypted
+        targetPost.cost = Number(cost)
+        
+        // 🔥 毁灭级安全操作：从即刻要发往前端的内存对象中彻底抹除明文下载字段
+        if (targetPost.properties?.DownloadLink) delete targetPost.properties.DownloadLink
+        if (targetPost.downloadLink) delete targetPost.downloadLink
+      }
+    }
+  } catch (cryptoError) {
+    console.error('服务端核心资源动态混淆失败:', cryptoError)
+  }
+  // === 👆 核心积分资源服务端加密拦截逻辑结束 👆 ===
+
   return {
     props,
     revalidate: process.env.EXPORT
