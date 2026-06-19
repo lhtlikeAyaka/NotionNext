@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useUser } from '@clerk/nextjs'
-import LayoutBase from '@/themes/nav' // 强制绑定激活的 NAV 主题结构
-import { getGlobalData } from '@/lib/db/SiteDataApi' // 完美对齐新版 SiteDataApi 抽象层
+import { LayoutBase } from '@/themes/nav' // ⚡ 修复点 1：改为具名导入 {}
+import { getGlobalData } from '@/lib/db/notion/getNotionData' // ⚡ 修复点 2：对齐迁移后的新路径
 
 export default function Shop(props) {
   const { products } = props
@@ -132,7 +132,7 @@ export async function getStaticProps() {
   const globalData = await getGlobalData({ from: 'shop' })
   
   const databaseId = process.env.NOTION_SHOP_DB_ID
-  const token = process.env.NOTION_SECRET // 统一对接标准的集成的密钥变量名
+  const token = process.env.NOTION_SECRET 
   
   let products = []
   
@@ -175,6 +175,6 @@ export async function getStaticProps() {
       products,
       ...globalData
     },
-    revalidate: 15 // ISR 增量刷新时限设定为 15 秒
+    revalidate: 15
   }
 }
