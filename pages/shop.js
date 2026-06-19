@@ -1,7 +1,9 @@
 import { useState, useEffect } from 'react'
 import { useUser } from '@clerk/nextjs'
-import { LayoutBase } from '@/themes/nav' // ⚡ 修复点 1：改为具名导入 {}
-import { getGlobalData } from '@/lib/db/notion/getNotionData' // ⚡ 修复点 2：对齐迁移后的新路径
+import { LayoutBase } from '@/themes/nav' // 保持具名导入，对齐你的 nav 主题组件
+import BLOG from '@/blog.config'
+import { siteConfig } from '@/lib/config'
+import { fetchGlobalAllData } from '@/lib/db/SiteDataApi' // ⚡ 彻底对齐首页，导入正确的数据方法
 
 export default function Shop(props) {
   const { products } = props
@@ -128,8 +130,11 @@ export default function Shop(props) {
   )
 }
 
-export async function getStaticProps() {
-  const globalData = await getGlobalData({ from: 'shop' })
+export async function getStaticProps(ctx) {
+  const { locale } = ctx
+  const from = 'shop'
+  // ⚡ 彻底对齐首页，传入规范的对象参数获取全局菜单与配置
+  const globalData = await fetchGlobalAllData({ from, locale })
   
   const databaseId = process.env.NOTION_SHOP_DB_ID
   const token = process.env.NOTION_SECRET 
@@ -175,6 +180,7 @@ export async function getStaticProps() {
       products,
       ...globalData
     },
-    revalidate: 15
+    // ⚡ 缓存刷新时间同样对齐首页的配置文件逻辑
+    revalidate: siteConfig('NEXT_REVALIDATE_SECOND', BLOG.NEXT_REVALIDATE_SECOND, globalData?.NOTION_CONFIG) || 15
   }
 }
