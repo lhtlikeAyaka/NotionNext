@@ -29,7 +29,7 @@ import CategoryItem from './components/CategoryItem'
 import FloatButtonCatalog from './components/FloatButtonCatalog'
 import Footer from './components/Footer'
 import JumpToTopButton from './components/JumpToTopButton'
-import LogoBar = from './components/LogoBar'
+import LogoBar from './components/LogoBar'
 import { MenuItem } from './components/MenuItem'
 import PageNavDrawer from './components/PageNavDrawer'
 import TagItemMini from './components/TagItemMini'
@@ -229,8 +229,6 @@ const LayoutIndex = props => {
  * @returns
  */
 const LayoutPostListIndex = props => {
-  // const { customMenu, children, post, allNavPages, categoryOptions, slotLeft, slotRight, slotTop, meta } = props
-  // const [filteredNavPages, setFilteredNavPages] = useState(allNavPages)
   return (
     <>
       <Announcement {...props} />
@@ -246,8 +244,6 @@ const LayoutPostListIndex = props => {
  */
 const LayoutPostList = props => {
   const { posts } = props
-  // 顶部如果是按照分类或标签查看文章列表，列表顶部嵌入一个横幅
-  // 如果是搜索，则列表顶部嵌入 搜索框
   return (
     <>
       <div className='w-full max-w-7xl mx-auto justify-center mt-8'>
@@ -273,7 +269,6 @@ const LayoutSlug = props => {
   const router = useRouter()
   const waiting404 = siteConfig('POST_WAITING_TIME_FOR_404') * 1000
   useEffect(() => {
-    // 404
     if (!post) {
       setTimeout(
         () => {
@@ -315,8 +310,6 @@ const LayoutSlug = props => {
               {/* 资源解锁与下载按钮 */}
               <UnlockButton post={post} />
 
-              {/* 分享 */}
-              {/* <ShareBar post={post} /> */}
               {/* 文章分类和标签信息 */}
               <div className='flex justify-between'>
                 {CONFIG.POST_DETAIL_CATEGORY && post?.category && (
@@ -329,9 +322,6 @@ const LayoutSlug = props => {
                     ))}
                 </div>
               </div>
-
-              {/* 上一篇、下一篇文章 */}
-              {/* {post?.type === 'Post' && <ArticleAround prev={prev} next={next} />} */}
 
               <AdSlot />
               <WWAds className='w-full' orientation='horizontal' />
@@ -347,22 +337,10 @@ const LayoutSlug = props => {
   )
 }
 
-/**
- * 没有搜索
- * 全靠页面导航
- * @param {*} props
- * @returns
- */
 const LayoutSearch = props => {
   return <></>
 }
 
-/**
- * 归档页面基本不会用到
- * 全靠页面导航
- * @param {*} props
- * @returns
- */
 const LayoutArchive = props => {
   const { archivePosts } = props
   return (
@@ -380,20 +358,13 @@ const LayoutArchive = props => {
   )
 }
 
-/**
- * 404
- * @param {*} props
- * @returns
- */
 const Layout404 = props => {
   const router = useRouter()
   useEffect(() => {
-    // 延时3秒如果加载失败就返回首页
     setTimeout(() => {
       const article = isBrowser && document.getElementById('article-wrapper')
       if (!article) {
         router.push('/').then(() => {
-          // console.log('找不到页面', router.asPath)
         })
       }
     }, 3000)
@@ -411,9 +382,6 @@ const Layout404 = props => {
     </>
 }
 
-/**
- * 分类列表
- */
 const LayoutCategoryIndex = props => {
   const { categoryOptions } = props
   const { locale } = useGlobal()
@@ -448,9 +416,6 @@ const LayoutCategoryIndex = props => {
   )
 }
 
-/**
- * 标签列表
- */
 const LayoutTagIndex = props => {
   return <></>
 }
