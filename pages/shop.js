@@ -7,7 +7,7 @@ import { fetchGlobalAllData } from '@/lib/db/SiteDataApi'
 
 export default function Shop(props) {
   const { products = [] } = props
-  const { isSignedIn, user } = useUser()
+  const { isLoaded, isSignedIn, user } = useUser() // 引入 isLoaded 确保状态稳定
   const [userScore, setUserScore] = useState(0)
   const [loadingId, setLoadingId] = useState(null)
   
@@ -17,16 +17,14 @@ export default function Shop(props) {
   const [inviteInput, setInviteInput] = useState('')
   const [submittingCode, setSubmittingCode] = useState(false)
 
-  // 核心：精准读取 score，并在无短码时前端悄悄初始化 6 位短码
+  // 核心：精准读取 score，并在无短码时前端悄悄初始化
   useEffect(() => {
-    if (isSignedIn && user && user.publicMetadata) {
+    if (isLoaded && isSignedIn && user && user.publicMetadata) {
       const metadata = user.publicMetadata
       
-      // 读取资产
       const currentScore = metadata.score !== undefined ? metadata.score : 0
       setUserScore(parseInt(currentScore.toString() || '0', 10))
 
-      // 智能检查/下发 6 位短邀请码
       const existingCode = metadata.myInviteCode
       if (!existingCode) {
         const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789'
@@ -36,7 +34,6 @@ export default function Shop(props) {
         }
         setMyCode(code)
         
-        // 悄悄同步回 Clerk 数据库
         user.update({
           publicMetadata: {
             ...user.publicMetadata,
@@ -47,9 +44,9 @@ export default function Shop(props) {
         setMyCode(existingCode)
       }
     }
-  }, [isSignedIn, user])
+  }, [isLoaded, isSignedIn, user])
 
-  // 是否已经填写过邀请码（用于动态控制“补填”按钮显示）
+  // 是否已经填写过邀请码
   const hasReferred = !!user?.publicMetadata?.referredBy
 
   // 处理资源兑换扣分
@@ -89,16 +86,28 @@ export default function Shop(props) {
     }
   }
 
-  // 🌟 安全修复 1：兼容服务器端没有 navigator 的问题
+  // 🌟 修改点 1：未登录用户的复制邀请码拦截
   const handleCopyCode = () => {
+    if (!isSignedIn) {
+      alert('请先登录账号，才能生成并复制您的专属邀请码哦！')
+      return
+    }
     if (!myCode) return
     if (typeof navigator !== 'undefined' && navigator.clipboard) {
       navigator.clipboard.writeText(myCode)
       alert(`📋 你的专属邀请码【${myCode}】已复制！发给好友注册即可赚取 100 积分！`)
     } else {
-      // 降级兼容处理
       alert(`你的专属邀请码是：${myCode}，请手动复制发送给好友。`)
     }
+  }
+
+  // 🌟 修改点 2：未登录用户的弹窗拦截
+  const handleOpenInviteModal = () => {
+    if (!isSignedIn) {
+      alert('请先登录账号，再来激活 60 积分的迎新奖励！')
+      return
+    }
+    setShowInviteModal(true)
   }
 
   // 提交激活好友的邀请码
@@ -119,11 +128,7 @@ export default function Shop(props) {
         alert(`🎉 ${data.message}`)
         setInviteInput('')
         setShowInviteModal(false)
-        
-        // 🌟 安全修复 2：保护 window.location
-        if (typeof window !== 'undefined') {
-          window.location.reload()
-        }
+        if (typeof window !== 'undefined') window.location.reload()
       } else {
         alert(data.error || '激活失败')
       }
@@ -138,33 +143,30 @@ export default function Shop(props) {
     <LayoutBase {...props}>
       <div className="w-full max-w-6xl mx-auto px-2 py-4">
         
-        {/* 升级版资产展示区（整合裂变按钮） */}
         <div className="bg-white dark:bg-neutral-800 rounded-2xl p-5 shadow-sm mb-6 flex flex-col md:flex-row justify-between items-start md:items-center gap-4 border border-gray-100 dark:border-neutral-700">
           <div>
             <h1 className="text-xl font-bold">积分福利商店</h1>
             <p className="text-xs text-gray-400">使用您的积分兑换资源</p>
             
-            {/* 按钮群组：紧跟在商店标题下方 */}
-            {isSignedIn && (
-              <div className="flex flex-wrap gap-2 mt-3">
+            {/* 🌟 修改点 3：彻底移除 isSignedIn 判断，让按钮永远显示 */}
+            <div className="flex flex-wrap gap-2 mt-3">
+              <button 
+                onClick={handleCopyCode}
+                className="bg-gradient-to-r from-indigo-500 to-purple-500 hover:from-indigo-600 hover:to-purple-600 text-white text-[11px] px-3 py-1.5 rounded-xl font-bold transition-all active:scale-95 shadow-sm flex items-center gap-1"
+              >
+                <i className="fas fa-share-alt"></i> 邀请赚积分 {isSignedIn && myCode ? `(我的码: ${myCode})` : ''}
+              </button>
+              
+              {/* 只要没填过邀请码就显示（未登录用户默认 hasReferred 是 false，所以也会显示） */}
+              {!hasReferred && (
                 <button 
-                  onClick={handleCopyCode}
-                  className="bg-gradient-to-r from-indigo-500 to-purple-500 hover:from-indigo-600 hover:to-purple-600 text-white text-[11px] px-3 py-1.5 rounded-xl font-bold transition-all active:scale-95 shadow-sm flex items-center gap-1"
+                  onClick={handleOpenInviteModal}
+                  className="bg-amber-500 hover:bg-amber-600 text-white text-[11px] px-3 py-1.5 rounded-xl font-bold transition-all active:scale-95 shadow-sm flex items-center gap-1"
                 >
-                  <i className="fas fa-share-alt"></i> 邀请赚积分 (我的码: {myCode || '...'})
+                  <i className="fas fa-key"></i> 填邀请码领 60 分
                 </button>
-                
-                {/* 动态显示：没填过则显示该按钮 */}
-                {!hasReferred && (
-                  <button 
-                    onClick={() => setShowInviteModal(true)}
-                    className="bg-amber-500 hover:bg-amber-600 text-white text-[11px] px-3 py-1.5 rounded-xl font-bold transition-all active:scale-95 shadow-sm flex items-center gap-1"
-                  >
-                    <i className="fas fa-key"></i> 填邀请码领 60 分
-                  </button>
-                )}
-              </div>
-            )}
+              )}
+            </div>
           </div>
           
           <div className="bg-blue-50 dark:bg-blue-950/40 px-5 py-2.5 rounded-xl text-right w-full md:w-auto flex md:flex-col justify-between md:justify-center items-center md:items-end">
@@ -196,7 +198,7 @@ export default function Shop(props) {
         )}
       </div>
 
-      {/* 填写邀请码的移动端友好轻量级弹窗 */}
+      {/* 填写邀请码的弹窗 */}
       {showInviteModal && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-fade-in">
           <div className="bg-white dark:bg-neutral-800 w-full max-w-sm rounded-2xl p-6 shadow-2xl border border-gray-100 dark:border-neutral-700 text-center relative">
