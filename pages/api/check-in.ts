@@ -10,10 +10,10 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     const client = await clerkClient()
     const user = await client.users.getUser(userId)
     
-    // ⚡ 核心修复：全面对齐商店架构，统一从 points 字段读取独立账户总资产
-    const metadata = user.publicMetadata as { points?: string | number; lastCheckIn?: string }
+    // ⚡ 核心修复：全面对齐最新架构，统一从 score 字段读取独立账户总资产
+    const metadata = user.publicMetadata as { score?: string | number; lastCheckIn?: string }
 
-    const currentPoints = parseInt(metadata.points?.toString() || '0', 10)
+    const currentScore = parseInt(metadata.score?.toString() || '0', 10)
     const lastCheckIn = metadata.lastCheckIn || ''
     const today = new Date().toISOString().split('T')[0]
 
@@ -21,24 +21,27 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       return res.status(400).json({ error: '今日已签到，明天再来吧！' })
     }
 
+    // 🌟 自动化清洗：利用解构赋值，把历史遗留的 points 脏字段直接过滤掉
+    const { points: _, ...restMetadata } = user.publicMetadata as Record<string, any>
+
     // 执行签到加 10 分
-    const newPoints = currentPoints + 10
+    const newScore = currentScore + 10
     
-    // 同步更新回 Clerk 数据库，保持原有的 metadata 其它字段不被覆盖
+    // 同步更新回 Clerk 数据库，使用过滤后的 restMetadata
     await client.users.updateUserMetadata(userId, {
       publicMetadata: {
-        ...user.publicMetadata,
-        points: newPoints,
+        ...restMetadata,   // 🌟 完美继承其他自定义字段，同时在 Clerk 中彻底抹除 points
+        score: newScore,   // 写入正统的 score
         lastCheckIn: today
       }
     })
 
-    // ⚡ 战术性多字段返回：同时返回 points 和 newPoints，彻底堵死前端因版本不同而导致的 undefined 漏洞
+    // ⚡ 战术性多字段返回：对接修改后的 LayoutBase，确保 score 安全同步
     return res.status(200).json({ 
       success: true, 
       message: '签到成功！积分 +10', 
-      points: newPoints,
-      newPoints: newPoints
+      score: newScore,
+      newScore: newScore   // 兼容性保留
     })
   } catch (error) {
     console.error('Checkin API Error:', error)
