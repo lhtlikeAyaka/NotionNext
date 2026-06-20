@@ -8,16 +8,16 @@ import { fetchGlobalAllData } from '@/lib/db/SiteDataApi'
 export default function Shop(props) {
   const { products = [] } = props
   const { isSignedIn, user } = useUser()
-  const [userPoints, setUserPoints] = useState(0)
+  const [userScore, setUserScore] = useState(0) // 🌟 状态正名为 userScore
   const [loadingId, setLoadingId] = useState(null)
 
-  // ⚡ 核心修复：兼容 score 和 points 字段，防止页面刷新黑屏/白屏
+  // ⚡ 核心修复：彻底抛弃旧的 points 字段，精准对齐全局 score 账本
   useEffect(() => {
     if (isSignedIn && user && user.publicMetadata) {
       const metadata = user.publicMetadata
-      // 智能优先读取 score，否则读取 points
-      const currentPoints = metadata.score !== undefined ? metadata.score : (metadata.points !== undefined ? metadata.points : 0)
-      setUserPoints(parseInt(currentPoints.toString() || '0', 10))
+      // 精准读取 score 字段
+      const currentScore = metadata.score !== undefined ? metadata.score : 0
+      setUserScore(parseInt(currentScore.toString() || '0', 10))
     }
   }, [isSignedIn, user])
 
@@ -26,8 +26,8 @@ export default function Shop(props) {
       alert('请先登录账号后再进行资源兑换！')
       return
     }
-    if (userPoints < product.cost) {
-      alert(`积分不足！当前只有 ${userPoints} 积分。`)
+    if (userScore < product.cost) {
+      alert(`积分不足！当前只有 ${userScore} 积分。`)
       return
     }
     if (!confirm(`确定要消耗 ${product.cost} 积分兑换【${product.name}】吗？`)) return
@@ -42,7 +42,7 @@ export default function Shop(props) {
       const data = await res.json()
       
       if (res.ok) {
-        setUserPoints(data.newPoints)
+        setUserScore(data.score) // 🌟 核心：对应兑换API返回的 score 字段
         alert('🎉 兑换成功！')
         window.open(data.link, '_blank')
       } else {
@@ -66,7 +66,7 @@ export default function Shop(props) {
           </div>
           <div className="bg-blue-50 dark:bg-blue-950/40 px-5 py-2.5 rounded-xl text-right">
             <span className="text-xs text-blue-600 block">我的可用资产</span>
-            <span className="text-2xl font-black text-blue-600">{isSignedIn ? userPoints : '0'} <span className="text-xs">分</span></span>
+            <span className="text-2xl font-black text-blue-600">{isSignedIn ? userScore : '0'} <span className="text-xs">分</span></span>
           </div>
         </div>
 
