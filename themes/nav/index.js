@@ -68,9 +68,9 @@ const LayoutBase = props => {
 
   const showTocButton = post?.toc?.length > 1
 
-  // Clerk 用户登录状态与元数据读取
+  // Clerk 用户登录状态与元数据读取（状态均已修正为 score）
   const { isSignedIn, user } = useUser()
-  const [points, setPoints] = useState(0)
+  const [score, setScore] = useState(0)
   const [hasSignedIn, setHasSignedIn] = useState(false)
 
   // 监听登录状态，实时同步 Clerk 个人云端数据库内的积分与签到指标
@@ -78,16 +78,16 @@ const LayoutBase = props => {
     setFilteredNavPages(allNavPages)
     
     if (isSignedIn && user) {
-      // 从 Clerk 的 publicMetadata 独立空间抓取数据
-      const currentPoints = parseInt(user.publicMetadata?.points || '0', 10)
-      setPoints(currentPoints)
+      // 从 Clerk 的 publicMetadata 独立空间抓取数据（修正为 score）
+      const currentScore = parseInt(user.publicMetadata?.score || '0', 10)
+      setScore(currentScore)
       
       const lastDate = user.publicMetadata?.lastSignInDate
       const today = new Date().toISOString().split('T')[0]
       setHasSignedIn(lastDate === today)
     } else {
       // 退出登录或未登录状态重置本地状态
-      setPoints(0)
+      setScore(0)
       setHasSignedIn(false)
     }
   }, [post, allNavPages, isSignedIn, user])
@@ -121,13 +121,13 @@ const LayoutBase = props => {
       const data = await res.json()
       
       if (res.ok) {
-        setPoints(data.points)
+        setScore(data.score) // 接收后端返回的最新 score
         setHasSignedIn(true)
-        alert(`🎉 签到成功！\n获得奖励：+10 积分\n当前独立账户总积分：${data.points} 分`)
+        alert(`🎉 签到成功！\n获得奖励：+10 积分\n当前独立账户总积分：${data.score} 分`)
       } else {
         alert(data.error || '签到失败，请稍后再试')
-        if (data.points !== undefined) {
-          setPoints(data.points)
+        if (data.score !== undefined) {
+          setScore(data.score)
         }
       }
     } catch (error) {
@@ -251,7 +251,7 @@ const LayoutBase = props => {
                 ? 'bg-emerald-500 hover:bg-emerald-600 dark:bg-emerald-600' 
                 : 'bg-blue-600 hover:bg-blue-700 dark:bg-blue-500'
           }`}
-          title={!isSignedIn ? '请登录账户' : hasSignedIn ? `今日已签到 (当前:${points}分)` : '每日签到 (+10积分)'}
+          title={!isSignedIn ? '请登录账户' : hasSignedIn ? `今日已签到 (当前:${score}分)` : '每日签到 (+10积分)'}
         >
           <i className={`fas ${hasSignedIn ? 'fa-check-circle' : 'fa-calendar-check'} text-lg`}></i>
         </button>
