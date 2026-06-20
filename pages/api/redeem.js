@@ -48,26 +48,26 @@ export default async function handler(req, res) {
       return res.status(500).json({ error: '掌柜暂未给该商品配置下载地址，请联系管理员补档' })
     }
 
-    // 3. 读取该用户在 Clerk 独立空间内的总资产
+    // 3. 读取该用户在 Clerk 独立空间内的总资产（已修正为 score）
     const client = await clerkClient()
     const user = await client.users.getUser(userId)
-    const currentPoints = parseInt(user.publicMetadata?.points || '0', 10)
+    const currentScore = parseInt(user.publicMetadata?.score || '0', 10)
 
-    if (currentPoints < cost) {
-      return res.status(400).json({ error: `您的积分不足！兑换需要 ${cost} 分，当前仅有 ${currentPoints} 分。` })
+    if (currentScore < cost) {
+      return res.status(400).json({ error: `您的积分不足！兑换需要 ${cost} 分，当前仅有 ${currentScore} 分。` })
     }
 
     // 4. 资产足够，执行扣分并同步更新回 Clerk 数据库
-    const newPoints = currentPoints - cost
+    const newScore = currentScore - cost
     await client.users.updateUserMetadata(userId, {
       publicMetadata: {
         ...user.publicMetadata,
-        points: newPoints
+        score: newScore // 🌟 关键：扣分写入正确的 score 字段
       }
     })
 
-    // 5. 将受保护的真实资源 Link 返回给前端
-    return res.status(200).json({ message: '兑换成功', link, newPoints })
+    // 5. 将受保护的真实资源 Link 和最新剩余积分返回给前端
+    return res.status(200).json({ message: '兑换成功', link, score: newScore })
   } catch (error) {
     console.error('Redeem Backend Core Error:', error)
     return res.status(500).json({ error: '商店核心服务异常，请联系站长修复' })
