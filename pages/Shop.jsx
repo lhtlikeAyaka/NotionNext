@@ -17,7 +17,7 @@ export default function Shop(props) {
   const [inviteInput, setInviteInput] = useState('')
   const [submittingCode, setSubmittingCode] = useState(false)
 
-  // 1. 核心修复：精准读取 score，并在无短码时前端悄悄初始化 6 位短码
+  // 核心：精准读取 score，并在无短码时前端悄悄初始化 6 位短码
   useEffect(() => {
     if (isSignedIn && user && user.publicMetadata) {
       const metadata = user.publicMetadata
@@ -76,7 +76,9 @@ export default function Shop(props) {
       if (res.ok) {
         setUserScore(data.score)
         alert('🎉 兑换成功！')
-        window.open(data.link, '_blank')
+        if (typeof window !== 'undefined' && data.link) {
+          window.open(data.link, '_blank')
+        }
       } else {
         alert(data.error || '兑换失败')
       }
@@ -87,11 +89,16 @@ export default function Shop(props) {
     }
   }
 
-  // 复制专属短码
+  // 🌟 安全修复 1：兼容服务器端没有 navigator 的问题
   const handleCopyCode = () => {
     if (!myCode) return
-    navigator.clipboard.writeText(myCode)
-    alert(`📋 你的专属邀请码【${myCode}】已复制！发给好友注册即可赚取 100 积分！`)
+    if (typeof navigator !== 'undefined' && navigator.clipboard) {
+      navigator.clipboard.writeText(myCode)
+      alert(`📋 你的专属邀请码【${myCode}】已复制！发给好友注册即可赚取 100 积分！`)
+    } else {
+      // 降级兼容处理
+      alert(`你的专属邀请码是：${myCode}，请手动复制发送给好友。`)
+    }
   }
 
   // 提交激活好友的邀请码
@@ -112,7 +119,11 @@ export default function Shop(props) {
         alert(`🎉 ${data.message}`)
         setInviteInput('')
         setShowInviteModal(false)
-        window.location.reload() // 强制重载元数据
+        
+        // 🌟 安全修复 2：保护 window.location
+        if (typeof window !== 'undefined') {
+          window.location.reload()
+        }
       } else {
         alert(data.error || '激活失败')
       }
@@ -127,7 +138,7 @@ export default function Shop(props) {
     <LayoutBase {...props}>
       <div className="w-full max-w-6xl mx-auto px-2 py-4">
         
-        {/* 🌟 升级版资产展示区（整合裂变按钮） */}
+        {/* 升级版资产展示区（整合裂变按钮） */}
         <div className="bg-white dark:bg-neutral-800 rounded-2xl p-5 shadow-sm mb-6 flex flex-col md:flex-row justify-between items-start md:items-center gap-4 border border-gray-100 dark:border-neutral-700">
           <div>
             <h1 className="text-xl font-bold">积分福利商店</h1>
@@ -185,7 +196,7 @@ export default function Shop(props) {
         )}
       </div>
 
-      {/* 🌟 专属：填写邀请码的移动端友好轻量级弹窗 */}
+      {/* 填写邀请码的移动端友好轻量级弹窗 */}
       {showInviteModal && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-fade-in">
           <div className="bg-white dark:bg-neutral-800 w-full max-w-sm rounded-2xl p-6 shadow-2xl border border-gray-100 dark:border-neutral-700 text-center relative">
